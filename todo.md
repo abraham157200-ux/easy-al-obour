@@ -17,6 +17,7 @@
 
 ## 🔄 In Progress / Needs Verification
 
+- [x] Verify price consistency before and after order creation (CONFIRMED)
 - [ ] Test authentication flow (register/login/logout)
 - [ ] Test order creation and management
 - [ ] Test driver location tracking and live updates
@@ -46,3 +47,26 @@
 - Socket.IO configured for real-time tracking
 - Authentication uses phone/password method with bcryptjs
 - tRPC provides type-safe API contracts
+
+
+## 💰 Pricing System (VERIFIED)
+
+**Pricing Formula:**
+- First 3 km = 25 EGP (fixed)
+- Each additional km = 5 EGP
+- Formula: `price = distance <= 3 ? 25 : 25 + (distance - 3) * 5`
+
+**Examples:**
+- 2 km → 25 EGP
+- 3 km → 25 EGP
+- 4 km → 30 EGP
+- 5 km → 35 EGP
+- 7 km → 45 EGP
+- 10 km → 60 EGP
+
+**Price Consistency Verified:**
+- ✅ Frontend calculation matches backend calculation
+- ✅ Price displayed to user matches stored price
+- ✅ Price sent to API matches database value
+- ✅ Price retrieved from database matches original value
+- ✅ 9/9 vitest tests passed
