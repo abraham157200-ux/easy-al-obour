@@ -1,28 +1,136 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import {
+  int,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  decimal,
+  boolean,
+  datetime,
+  json,
+} from "drizzle-orm/mysql-core";
 
 /**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
+ * Users table - Core user data for customers, drivers, and admins
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  phone: varchar("phone", { length: 20 }).unique(),
+  password: varchar("password", { length: 255 }),
+  name: varchar("name", { length: 100 }),
+  email: varchar("email", { length: 255 }),
+  role: mysqlEnum("role", ["customer", "driver", "admin"]).default("customer").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  totalCommission: decimal("totalCommission", { precision: 10, scale: 2 }).default("0").notNull(),
+  totalDebt: decimal("totalDebt", { precision: 10, scale: 2 }).default("0").notNull(),
+  isBlocked: boolean("isBlocked").default(false).notNull(),
+  // عمولات السائق والحالة
+  pendingCommission: decimal("pendingCommission", { precision: 10, scale: 2 }).default("0").notNull(), // عمولات مستحقة لم تدفع
+  paidCommission: decimal("paidCommission", { precision: 10, scale: 2 }).default("0").notNull(), // عمولات مدفوعة
+  accountStatus: mysqlEnum("accountStatus", ["active", "suspended", "disabled"]).default("active").notNull(), // حالة الحساب
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn"),
+  loginMethod: varchar("loginMethod", { length: 64 }),
 });
 
+/**
+ * Orders table - Delivery orders
+ */
+export const orders = mysqlTable("orders", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customerId").notNull(),
+  driverId: int("driverId"),
+  pickupLocation: json("pickupLocation").notNull(), // { address, latitude, longitude }
+  deliveryLocation: json("deliveryLocation").notNull(), // { address, latitude, longitude }
+  status: mysqlEnum("status", [
+    "pending",
+    "assigned",
+    "accepted",
+    "in_transit",
+    "arrived",
+    "delivered",
+    "cancelled",
+  ])
+    .default("pending")
+    .notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }),
+  distance: decimal("distance", { precision: 10, scale: 2 }), // in kilometers
+  estimatedTime: int("estimatedTime"), // in minutes
+  notes: text("notes"),
+  rating: int("rating"), // 1-5 stars
+  ratingComment: text("ratingComment"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  deliveredAt: timestamp("deliveredAt"),
+});
+
+/**
+ * Driver Availability - Track driver location and availability
+ */
+export const driversAvailability = mysqlTable("drivers_availability", {
+  id: int("id").autoincrement().primaryKey(),
+  driverId: int("driverId").notNull().unique(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  isAvailable: boolean("isAvailable").default(true).notNull(),
+  currentOrderId: int("currentOrderId"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Notifications table - System notifications for users
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  type: mysqlEnum("type", [
+    "order_assigned",
+    "order_accepted",
+    "order_in_transit",
+    "order_arrived",
+    "order_delivered",
+    "order_cancelled",
+    "new_order_available",
+    "system",
+  ])
+    .default("system")
+    .notNull(),
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  readAt: timestamp("readAt"),
+});
+
+/**
+ * Order History - Track order status changes
+ */
+export const orderHistory = mysqlTable("order_history", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  changedBy: int("changedBy"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// Type exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = typeof orders.$inferInsert;
+
+export type DriverAvailability = typeof driversAvailability.$inferSelect;
+export type InsertDriverAvailability = typeof driversAvailability.$inferInsert;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+export type OrderHistory = typeof orderHistory.$inferSelect;
+export type InsertOrderHistory = typeof orderHistory.$inferInsert;
