@@ -400,9 +400,11 @@ export async function updateOrderStatus(orderId: number, status: string) {
     // Update driver commission when order is delivered
     if (status === "delivered") {
       const order = await getOrderById(orderId);
-      if (order && order.driverId && order.price) {
-        const commission = typeof order.price === 'string' ? parseFloat(order.price) : order.price;
-        await updateDriverCommission(order.driverId, commission);
+      if (order && order.driverId) {
+        // Import COMMISSION_PER_ORDER constant
+        const { COMMISSION_PER_ORDER } = await import("../shared/pricing");
+        // Add fixed commission per order (3 EGP), not the order price
+        await updateDriverCommission(order.driverId, COMMISSION_PER_ORDER);
       }
     }
 
@@ -611,7 +613,8 @@ export async function updateDriverCommission(driverId: number, amount: number) {
     const newPending = currentPending + amount;
 
     // إذا تجاوزت العمولات المستحقة 30 جنيه، قم بإيقاف الحساب تلقائياً
-    const shouldSuspend = newPending >= 30;
+    // يتم الحظر فقط عند تجاوز 30 جنيه (أكبر من 30 وليس يساوي)
+    const shouldSuspend = newPending > 30;
 
     const updateData: any = {
       pendingCommission: newPending.toString(),

@@ -30,7 +30,13 @@ export default function DriverDashboard() {
   const completeOrderMutation = trpc.orders.completeOrder.useMutation();
   const acceptOrderMutation = trpc.orders.acceptOrder.useMutation();
   const rejectOrderMutation = trpc.orders.rejectOrder.useMutation();
-  const updateLocationMutation = trpc.location.updateDriverLocation.useMutation();
+  const updateLocationMutation = trpc.location.updateDriverLocation.useMutation({
+    onError: (error) => {
+      console.error("Location update error:", error);
+      // Don't show error toast for location updates - they happen frequently
+      // and the location is updated even if there's a network issue
+    },
+  });
   // Component to display customer details for each order
   const CustomerOrderDetails = ({ orderId }: { orderId: number }) => {
     const customerQuery = trpc.orders.getOrderWithCustomer.useQuery(
@@ -83,7 +89,7 @@ export default function DriverDashboard() {
         (position) => {
           const { latitude, longitude } = position.coords;
           setDriverLocation({ latitude, longitude });
-          // Send location to server
+          // Send location to server (silently, don't show errors)
           updateLocationMutation.mutate({ latitude, longitude });
         },
         (error) => {
@@ -97,7 +103,7 @@ export default function DriverDashboard() {
         (position) => {
           const { latitude, longitude } = position.coords;
           setDriverLocation({ latitude, longitude });
-          // Send location to server
+          // Send location to server (silently, don't show errors)
           updateLocationMutation.mutate({ latitude, longitude });
         },
         (error) => {

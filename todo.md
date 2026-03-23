@@ -70,3 +70,9 @@
 - ✅ Price sent to API matches database value
 - ✅ Price retrieved from database matches original value
 - ✅ 9/9 vitest tests passed
+
+
+## 🐛 Issues Found (Driver Dashboard)
+
+- [x] **Issue 1: Wrong commission calculation** - FIXED: System was adding entire order price as commission instead of fixed 3 EGP per order
+- [x] **Issue 2: Location update error message** - FIXED: Added proper error handling to prevent showing error toast for frequent location updates
